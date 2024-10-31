@@ -1,0 +1,94 @@
+.homeBody {
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: rgb(255,243,238);
+    background: linear-gradient(90deg, rgba(255,243,238,1) 0%, rgba(251,227,215,1) 80%, rgba(255,228,214,1) 100%);
+}
+
+.homeContainer{
+    width: 80%;
+    height: 80vh;
+    /* background-color: #FDFDFD; */
+    background-color: red;
+    border-radius: 20px;
+    margin: 0;
+    display: flex;
+    overflow: hidden;
+}
+
+.sidebarContainer {
+    background-color: white;
+    
+    width: 20%;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center
+}
+
+.sidebarWrapper {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    row-gap: 20px;
+}
+
+.sideBarTitle {
+    display: flex;
+    justify-content: space-around;
+    font-size: 18px;
+    font-weight: 800;
+    color: #435585;
+}
+
+.MyProfileContainer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 10px;
+    border-radius: 10px;
+    background-color: #EDEDED;
+    color: #435585;
+}
+
+.MyProfileSubContainer {
+    display: flex;
+    column-gap: 10px;
+    align-items: center;
+}
+
+.MyProfileContainer button {
+    background: none;
+    border: none;
+    color: #435585;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 10px;
+}
+
+.MyProfileContainer button:hover {
+    background-color: #d2d2d2;
+}
+
+/* sidebar */
+
+.SearchChatsContainer {
+    padding: 10px 0px;
+}
+
+.SearchResultContainer {
+    display: flex;
+    flex-direction: column;
+    row-gap: 10px;
+}
+
+.SearchResultItem {
+    padding: 5px 10px;
+    background-color: #EDEDED;
+    border-radius: 10px;
+    cursor: pointer;
+}

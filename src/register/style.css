@@ -1,0 +1,126 @@
+.registerWrapper form {
+  display: flex;
+  flex-direction: column;
+  row-gap: 20px;
+  justify-content: center;
+  align-items: center;
+}
+
+.registerWrapper h4 {
+  display: flex;
+  justify-content: space-around;
+}
+
+.registerContainer {
+  position: relative;
+  width: 100%;
+  display: flex;
+  justify-content: space-around;
+}
+
+.registerWrapper {
+  position: absolute;
+
+  width: 300px;
+  height: 400px;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+
+  padding: 40px;
+  border-radius: 10px;
+
+  background-color: #dddddd;
+  color: #323232;
+}
+
+/* Form animations */
+.registerContainer.animate-signup .registerWrapper.log-in {
+  transform: rotate(7deg);
+  animation: animateRotate 0.7s ease-in-out forwards;
+  animation-delay: 0.3s;
+}
+
+.registerContainer.animate-login .registerWrapper.log-in {
+  animation: animateSignIn 1.5s ease-in-out forwards;
+}
+
+.registerContainer.animate-login .registerWrapper.sign-up {
+  transform: rotate(-7deg);
+  animation: animateRotate2 0.7s ease-in-out forwards;
+  animation-delay: 0.3s;
+}
+
+.registerContainer.animate-signup .registerWrapper.sign-up {
+  animation: animateSignUp 1.5s ease-in-out forwards;
+}
+
+@keyframes animateRotate {
+  0% {
+    transform: rotate(7deg);
+  }
+
+  100% {
+    transform: rotate(0);
+    z-index: 1;
+    background-color: #fdfdfd;
+  }
+}
+
+@keyframes animateRotate2 {
+  0% {
+    transform: rotate(-7deg);
+  }
+
+  100% {
+    transform: rotate(0);
+    z-index: 1;
+    background-color: #fdfdfd;
+  }
+}
+
+@keyframes animateSignIn {
+  0% {
+    transform: translateX(0);
+    z-index: 1;
+    background-color: #fdfdfd;
+  }
+
+  50% {
+    transform: translateX(-500px);
+  }
+
+  100% {
+    transform: translateX(0) rotate(7deg);
+    z-index: 0;
+    background-color: #dddddd;
+  }
+}
+
+@keyframes animateSignUp {
+  0% {
+    transform: translateX(0);
+    z-index: 1;
+    background-color: #fdfdfd;
+  }
+
+  50% {
+    transform: translateX(500px);
+  }
+
+  100% {
+    transform: translateX(0) rotate(-7deg);
+    z-index: 0;
+    background-color: #dddddd;
+  }
+}
+
+.ErrorContainer {
+  position: absolute;
+  left: 50%;
+  bottom: 5%;
+  transform: translate(-50%, 0%);
+  z-index: 100;
+}

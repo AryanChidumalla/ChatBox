@@ -10,6 +10,7 @@ import { auth } from "./firebase/firebase";
 import {
   getUserDetails,
   initializeInbox,
+  listenForFriendRequests,
   // listenForFriendRequests,
 } from "./firebase/firebaseFunctions";
 import { setSidePanelInbox } from "./redux/reducer/sidepanel";
@@ -24,15 +25,20 @@ function App() {
     const unsub = onAuthStateChanged(auth, async (user) => {
       if (user) {
         const inbox = await initializeInbox(user.uid);
-        console.log(inbox);
+
+        const inboxPayload = {
+          inboxList: inbox.map((item) => ({
+            ...item,
+            timestamp: item.timestamp.toDate().toISOString(),
+          })),
+          inboxNotification: inbox.length,
+        };
+
+        dispatch(setSidePanelInbox(inboxPayload));
+
+        await listenForFriendRequests(user.uid, dispatch);
 
         // listenForFriendRequests(user.uid);
-
-        // const inboxNotification = useSelector(
-        //   (state) => state.reducer.sidePanel.inbox.inboxNotification
-        // );
-
-        // console.log("Inbox Notification From App.jsx:", inboxNotification);
 
         const serializableUser = {
           uid: user.uid,

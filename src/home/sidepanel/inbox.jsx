@@ -6,33 +6,41 @@ import {
   acceptFriendRequest,
   declineFriendRequest,
 } from "../../firebase/firebaseFunctions";
+import EmptyProfileIcon from "../../assets/emptyProfileIcon.svg";
+import { StyledButton } from "../../mui-templates/textfield";
 
 export default function Inbox() {
   const userDetails = useSelector((state) => state.reducer.auth.userDetails);
+  const inboxList = useSelector(
+    (state) => state.reducer.sidePanel.inbox.inboxList
+  );
   const currentUserId = userDetails.uid;
   const [requests, setRequests] = useState([]);
 
   useEffect(() => {
-    const unsubscribe = getIncomingRequests(
-      currentUserId,
-      async (incomingRequests) => {
-        // Fetch user details for each incoming request
-        const userDetailsPromises = incomingRequests.map(async (request) => {
-          const userDetail = await getUserDetails(request.senderId);
-          return { ...userDetail, requestId: request.id };
-        });
+    const fetchUserDetails = async () => {
+      const userDetailsPromises = inboxList.map(async (request) => {
+        const userDetail = await getUserDetails(request.senderId);
+        return { ...userDetail, requestId: request.id };
+      });
 
-        // Wait for all promises to resolve
-        const userDetailsArray = await Promise.all(userDetailsPromises);
+      // Wait for all promises to resolve
+      const userDetailsArray = await Promise.all(userDetailsPromises);
 
-        // Update the requests state
-        setRequests(userDetailsArray);
-      }
-    );
+      // Update the requests state
+      setRequests(userDetailsArray);
+    };
 
-    // Clean up the listener on unmount
-    return () => unsubscribe();
-  }, [currentUserId]);
+    // Call the function to fetch user details
+    fetchUserDetails();
+
+    // Cleanup function (if necessary) can go here, but usually not needed for fetching data
+    return () => {
+      // Any necessary cleanup can go here
+    };
+  }, [currentUserId, inboxList]);
+
+  // console.log(requests);
 
   const handleAccept = async (requestId) => {
     await acceptFriendRequest(requestId);
@@ -47,7 +55,15 @@ export default function Inbox() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "20px",
+        // backgroundColor: "red",
+        height: "100%",
+      }}
+    >
       <h2
         style={{
           color: "#323232",
@@ -58,47 +74,88 @@ export default function Inbox() {
       >
         Inbox
       </h2>
-      {requests.map((user, i) => (
-        <div
-          key={i}
-          style={{
-            display: "flex",
-            gap: "10px",
-            alignItems: "center",
-            backgroundColor: "#EDEDED",
-            padding: "10px",
-            borderRadius: "10px",
-          }}
-        >
-          <div>
-            <img
-              src={user.image}
-              alt="Profile"
-              style={{ width: "50px", height: "50px", borderRadius: "50%" }}
-            />
-          </div>
-          <div>
-            <h4
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "20px",
+          height: "100%",
+          overflowY: "auto",
+        }}
+      >
+        {requests.map((user, i) => (
+          <div
+            key={i}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "10px",
+              alignItems: "center",
+              backgroundColor: "#EDEDED",
+              padding: "10px",
+              borderRadius: "10px",
+            }}
+          >
+            <div
               style={{
-                color: "#323232",
-                margin: "0",
                 display: "flex",
-                justifyContent: "flex-start",
+                gap: "20px",
+                justifyContent: "space-between",
+                alignItems: "center",
               }}
             >
-              {user.username}
-            </h4>
+              {user.image === "" ? (
+                <img
+                  src={EmptyProfileIcon}
+                  alt="Profile"
+                  style={{ width: "50px", height: "50px", borderRadius: "50%" }}
+                />
+              ) : (
+                <img
+                  src={user.image}
+                  alt="Profile"
+                  style={{ width: "50px", height: "50px", borderRadius: "50%" }}
+                />
+              )}
+              <h4
+                style={{
+                  color: "#323232",
+                  margin: "0",
+                  display: "flex",
+                  justifyContent: "flex-start",
+                }}
+              >
+                {user.username}
+              </h4>
+            </div>
             <div>
-              <button onClick={() => handleAccept(user.requestId)}>
+              <div
+                style={{
+                  display: "flex",
+                  gap: "20px",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <StyledButton
+                  label="Accept"
+                  onClick={() => handleAccept(user.requestId)}
+                />
+                <StyledButton
+                  label="Decline"
+                  onClick={() => handleDecline(user.requestId)}
+                />
+                {/* <button onClick={() => handleAccept(user.requestId)}>
                 Accept
-              </button>
-              <button onClick={() => handleDecline(user.requestId)}>
+              </button> */}
+                {/* <button onClick={() => handleDecline(user.requestId)}>
                 Decline
-              </button>
+              </button> */}
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }

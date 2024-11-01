@@ -23,7 +23,7 @@ function Home() {
     (state) => state.reducer.sidePanel.inbox.inboxNotification
   );
 
-  console.log("Inbox Notification:", inboxNotification);
+  // console.log("Inbox Notification:", inboxNotification);
 
   return (
     <div

@@ -126,7 +126,8 @@ const searchUsers = async (searchTerm) => {
 
 const sendFriendRequest = async (senderId, receiverId) => {
   const friendRequestData = {
-    senderId,
+    senderId: senderId,
+    receiverId: receiverId,
     status: "pending",
     timestamp: new Date(),
   };
@@ -134,11 +135,17 @@ const sendFriendRequest = async (senderId, receiverId) => {
   try {
     // Create a reference to the receiver's friendRequests sub-collection
     const receiverRef = doc(db, "users", receiverId); // Reference to the receiver's user document
-    const friendRequestsRef = collection(receiverRef, "friendRequests"); // Reference to the friendRequests sub-collection
+    const friendRequestsRef = collection(receiverRef, "receivedFriendRequests"); // Reference to the friendRequests sub-collection
 
     // Add the friend request data to the receiver's sub-collection
     await addDoc(friendRequestsRef, friendRequestData);
-    console.log("Friend request sent successfully!");
+
+    // Create a reference to the sender's sentFriendRequests sub-collection
+    const senderRef = doc(db, "users", senderId); // Reference to the sender's user document
+    const sentFriendRequestsRef = collection(senderRef, "sentFriendRequests"); // Reference to the sentFriendRequests sub-collection
+
+    // Add the friend request data to the sender's sub-collection
+    await addDoc(sentFriendRequestsRef, friendRequestData);
   } catch (error) {
     console.error("Error sending friend request: ", error);
   }
@@ -152,7 +159,7 @@ const getIncomingRequests = (userId, callback) => {
 
   // Create a reference to the user's friendRequests sub-collection
   const userRef = doc(db, "users", userId);
-  const requestsRef = collection(userRef, "friendRequests");
+  const requestsRef = collection(userRef, "receivedFriendRequests");
 
   // Create a query to get all requests where the status is "pending"
   const q = query(requestsRef, where("status", "==", "pending"));
@@ -182,7 +189,7 @@ const getIncomingRequests = (userId, callback) => {
 const acceptFriendRequest = async (requestId) => {
   try {
     // Get the friend request document
-    const requestDocRef = doc(db, "friendRequests", requestId);
+    const requestDocRef = doc(db, "receivedFriendRequests", requestId);
 
     // Fetch the request data
     const requestSnapshot = await getDoc(requestDocRef);
@@ -219,43 +226,12 @@ const acceptFriendRequest = async (requestId) => {
 const declineFriendRequest = async (requestId) => {
   try {
     // Delete the friend request document
-    await deleteDoc(doc(db, "friendRequests", requestId));
+    await deleteDoc(doc(db, "receivedFriendRequests", requestId));
   } catch (error) {
     console.error("Error declining friend request: ", error.message);
     throw new Error(error.message); // Handle errors appropriately
   }
 };
-
-// const listenForFriendRequests = (receiverId) => {
-//   const dispatch = useDispatch(); // Initialize dispatch
-
-//   const friendRequestsRef = collection(
-//     doc(db, "users", receiverId),
-//     "friendRequests"
-//   );
-
-//   onSnapshot(friendRequestsRef, (snapshot) => {
-//     const inboxList = [];
-//     snapshot.docChanges().forEach((change) => {
-//       if (change.type === "added") {
-//         const request = change.doc.data();
-//         console.log("New Friend Added:", request);
-//         inboxList.push(request); // Collect all requests
-//       }
-//     });
-
-//     // Prepare the payload for the Redux action
-//     const payload = {
-//       inboxList: inboxList,
-//       inboxNotification: inboxList.length, // Update the notification count
-//     };
-
-//     console.log("Payload:", payload);
-
-//     // Dispatch action to update the Redux state
-//     dispatch(setSidePanelInbox(payload));
-//   });
-// };
 
 const getFriendsList = async (userId) => {
   // Reference to the document for the current user
@@ -286,7 +262,7 @@ const getFriendsList = async (userId) => {
 const initializeInbox = async (receiverId) => {
   const friendRequestsRef = collection(
     doc(db, "users", receiverId),
-    "friendRequests"
+    "receivedFriendRequests"
   );
 
   try {
@@ -302,6 +278,39 @@ const initializeInbox = async (receiverId) => {
   }
 };
 
+const listenForFriendRequests = (receiverId, dispatch) => {
+  const friendRequestsRef = collection(
+    doc(db, "users", receiverId),
+    "receivedFriendRequests"
+  );
+
+  onSnapshot(friendRequestsRef, (snapshot) => {
+    snapshot.docChanges().forEach(async (change) => {
+      if (change.type === "added") {
+        try {
+          const querySnapshot = await getDocs(friendRequestsRef);
+          const friendRequests = querySnapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }));
+
+          const inboxPayload = {
+            inboxList: friendRequests.map((item) => ({
+              ...item,
+              timestamp: item.timestamp.toDate().toISOString(),
+            })),
+            inboxNotification: friendRequests.length,
+          };
+
+          dispatch(setSidePanelInbox(inboxPayload));
+        } catch (error) {
+          console.log("Error fetching freind data: ", error);
+        }
+      }
+    });
+  });
+};
+
 export {
   loginUser,
   registerUser,
@@ -313,7 +322,7 @@ export {
   getIncomingRequests,
   acceptFriendRequest,
   declineFriendRequest,
-  // listenForFriendRequests,
+  listenForFriendRequests,
   getFriendsList,
   initializeInbox,
 };

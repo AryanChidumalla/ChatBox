@@ -17,6 +17,7 @@ import { useSelector } from "react-redux";
 import EmptyProfileIcon from "../../assets/emptyProfileIcon.svg";
 import { StyledButton } from "../../mui-templates/button";
 import Inbox from "./inbox";
+import AddFriend from "./addFriend";
 
 function SidePanel({ SidePanelName }) {
   switch (SidePanelName) {
@@ -37,87 +38,6 @@ function SidePanel({ SidePanelName }) {
     default:
       return null;
   }
-}
-
-function AddFriend() {
-  const userDetails = useSelector((state) => state.reducer.auth.userDetails);
-  const currentUserId = userDetails.uid;
-  const search = useRef(null);
-  const [searchResults, setSearchResults] = useState([]);
-
-  const handleSearch = async () => {
-    const term = search.current.value;
-    if (term) {
-      const results = await searchUsers(term);
-      setSearchResults(results);
-    } else {
-      setSearchResults([]);
-    }
-  };
-
-  const handleSendRequest = async (receiverId) => {
-    await sendFriendRequest(currentUserId, receiverId);
-    alert("Friend request sent!");
-  };
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-      <h2
-        style={{
-          color: "#323232",
-          margin: "0",
-          display: "flex",
-          justifyContent: "flex-start",
-        }}
-      >
-        Add Friend
-      </h2>
-      <StyledTextfieldForAddFriend
-        label="Search"
-        inputRef={search}
-        onChange={handleSearch}
-      />
-      {searchResults.map((user) => (
-        <div
-          key={user.id}
-          style={{
-            display: "flex",
-            gap: "10px",
-            alignItems: "center",
-            backgroundColor: "#EDEDED",
-            padding: "10px",
-            borderRadius: "10px",
-          }}
-        >
-          <div>
-            <img
-              src={user.image}
-              alt="Profile"
-              style={{ width: "50px", height: "50px", borderRadius: "50%" }}
-            />
-          </div>
-          <div>
-            <h4
-              style={{
-                color: "#323232",
-                margin: "0",
-                display: "flex",
-                justifyContent: "flex-start",
-              }}
-            >
-              {user.username}
-            </h4>
-            <StyledButton
-              label="Send Request"
-              onClick={() => {
-                handleSendRequest(user.id);
-              }}
-            />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
 }
 
 function Profile() {

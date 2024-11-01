@@ -7,7 +7,10 @@ import { useDispatch, useSelector } from "react-redux";
 import { setUser, setUserDetails } from "./redux/reducer/auth";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "./firebase/firebase";
-import { getUserDetails } from "./firebase/firebaseFunctions";
+import {
+  getUserDetails,
+  listenForFriendRequests,
+} from "./firebase/firebaseFunctions";
 
 function App() {
   const dispatch = useDispatch();
@@ -18,6 +21,7 @@ function App() {
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
       if (user) {
+        listenForFriendRequests(user.uid);
         const serializableUser = {
           uid: user.uid,
           email: user.email,

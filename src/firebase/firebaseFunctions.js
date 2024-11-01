@@ -5,6 +5,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  onSnapshot,
   query,
   setDoc,
   updateDoc,
@@ -109,6 +110,7 @@ const updateUserDetails = async (uid, username, description, image) => {
   }
 };
 
+// Assume this is your existing searchUsers function
 const searchUsers = async (searchTerm) => {
   const usersRef = collection(db, "users");
   const q = query(
@@ -123,43 +125,55 @@ const searchUsers = async (searchTerm) => {
 const sendFriendRequest = async (senderId, receiverId) => {
   const friendRequestData = {
     senderId,
-    receiverId,
     status: "pending",
     timestamp: new Date(),
   };
 
   try {
-    await addDoc(collection(db, "friendRequests"), friendRequestData);
+    // Create a reference to the receiver's friendRequests sub-collection
+    const receiverRef = doc(db, "users", receiverId); // Reference to the receiver's user document
+    const friendRequestsRef = collection(receiverRef, "friendRequests"); // Reference to the friendRequests sub-collection
+
+    // Add the friend request data to the receiver's sub-collection
+    await addDoc(friendRequestsRef, friendRequestData);
     console.log("Friend request sent successfully!");
   } catch (error) {
     console.error("Error sending friend request: ", error);
   }
 };
 
-const getIncomingRequests = async (userId) => {
-  try {
-    // Reference the friendRequests collection
-    const requestsRef = collection(db, "friendRequests");
-
-    // Create a query to get all requests where the toUser is the current user
-    const q = query(
-      requestsRef,
-      where("receiverId", "==", userId),
-      where("status", "==", "pending")
-    );
-
-    const querySnapshot = await getDocs(q);
-
-    const incomingRequests = querySnapshot.docs.map((doc) => ({
-      id: doc.id, // The document ID
-      ...doc.data(), // The document data
-    }));
-
-    return incomingRequests; // Return the array of incoming requests
-  } catch (error) {
-    console.error("Error fetching incoming requests: ", error);
-    throw new Error(error.message);
+const getIncomingRequests = (userId, callback) => {
+  // Ensure that the callback is a function
+  if (typeof callback !== "function") {
+    throw new TypeError("The second argument must be a function");
   }
+
+  // Create a reference to the user's friendRequests sub-collection
+  const userRef = doc(db, "users", userId);
+  const requestsRef = collection(userRef, "friendRequests");
+
+  // Create a query to get all requests where the status is "pending"
+  const q = query(requestsRef, where("status", "==", "pending"));
+
+  // Listen for real-time updates
+  const unsubscribe = onSnapshot(
+    q,
+    (querySnapshot) => {
+      const incomingRequests = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      // Call the callback with the updated incoming requests
+      callback(incomingRequests);
+    },
+    (error) => {
+      console.error("Error fetching incoming requests: ", error);
+    }
+  );
+
+  // Return the unsubscribe function to stop listening when needed
+  return unsubscribe;
 };
 
 // Function to accept a friend request
@@ -210,6 +224,48 @@ const declineFriendRequest = async (requestId) => {
   }
 };
 
+const listenForFriendRequests = (receiverId) => {
+  const friendRequestsRef = collection(
+    doc(db, "users", receiverId),
+    "friendRequests"
+  );
+
+  onSnapshot(friendRequestsRef, (snapshot) => {
+    snapshot.docChanges().forEach((change) => {
+      if (change.type === "added") {
+        const request = change.doc.data();
+        console.log("New friend request: ", request);
+      }
+    });
+  });
+};
+
+const getFriendsList = async (userId) => {
+  // Reference to the document for the current user
+  const friendsDocRef = doc(db, "friends", userId);
+
+  try {
+    // Fetch the document
+    const docSnapshot = await getDoc(friendsDocRef);
+
+    // Check if the document exists
+    if (docSnapshot.exists()) {
+      // Extract data from the document
+      const friendData = docSnapshot.data();
+      // console.log("Friend Data:", friendData);
+
+      // Return the friend data directly
+      return friendData; // This should be in the format of { friendId: true }
+    } else {
+      console.log("No such document!");
+      return {}; // Return an empty object if no document exists
+    }
+  } catch (error) {
+    console.error("Error fetching friend data:", error);
+    return {}; // Return an empty object on error
+  }
+};
+
 export {
   loginUser,
   registerUser,
@@ -221,4 +277,6 @@ export {
   getIncomingRequests,
   acceptFriendRequest,
   declineFriendRequest,
+  listenForFriendRequests,
+  getFriendsList,
 };

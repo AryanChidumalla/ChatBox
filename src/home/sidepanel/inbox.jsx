@@ -13,21 +13,25 @@ export default function Inbox() {
   const [requests, setRequests] = useState([]);
 
   useEffect(() => {
-    const fetchRequests = async () => {
-      const incomingRequests = await getIncomingRequests(currentUserId);
+    const unsubscribe = getIncomingRequests(
+      currentUserId,
+      async (incomingRequests) => {
+        // Fetch user details for each incoming request
+        const userDetailsPromises = incomingRequests.map(async (request) => {
+          const userDetail = await getUserDetails(request.senderId);
+          return { ...userDetail, requestId: request.id };
+        });
 
-      // Fetch user details for each request and combine with request info
-      const userDetailsPromises = incomingRequests.map(async (request) => {
-        const userDetail = await getUserDetails(request.senderId); // Assuming senderId is in the request
-        return { ...userDetail, requestId: request.id }; // Combine user detail with request ID
-      });
+        // Wait for all promises to resolve
+        const userDetailsArray = await Promise.all(userDetailsPromises);
 
-      // Wait for all promises to resolve
-      const userDetailsArray = await Promise.all(userDetailsPromises);
-      setRequests(userDetailsArray);
-    };
+        // Update the requests state
+        setRequests(userDetailsArray);
+      }
+    );
 
-    fetchRequests();
+    // Clean up the listener on unmount
+    return () => unsubscribe();
   }, [currentUserId]);
 
   const handleAccept = async (requestId) => {

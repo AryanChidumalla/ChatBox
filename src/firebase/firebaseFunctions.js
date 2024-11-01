@@ -18,6 +18,8 @@ import {
   signOut,
 } from "firebase/auth";
 import { getDownloadURL, getStorage, ref, uploadBytes } from "firebase/storage";
+import { useDispatch } from "react-redux";
+import { setSidePanelInbox } from "../redux/reducer/sidepanel";
 
 const registerUser = async (username, email, password) => {
   try {
@@ -224,21 +226,36 @@ const declineFriendRequest = async (requestId) => {
   }
 };
 
-const listenForFriendRequests = (receiverId) => {
-  const friendRequestsRef = collection(
-    doc(db, "users", receiverId),
-    "friendRequests"
-  );
+// const listenForFriendRequests = (receiverId) => {
+//   const dispatch = useDispatch(); // Initialize dispatch
 
-  onSnapshot(friendRequestsRef, (snapshot) => {
-    snapshot.docChanges().forEach((change) => {
-      if (change.type === "added") {
-        const request = change.doc.data();
-        console.log("New friend request: ", request);
-      }
-    });
-  });
-};
+//   const friendRequestsRef = collection(
+//     doc(db, "users", receiverId),
+//     "friendRequests"
+//   );
+
+//   onSnapshot(friendRequestsRef, (snapshot) => {
+//     const inboxList = [];
+//     snapshot.docChanges().forEach((change) => {
+//       if (change.type === "added") {
+//         const request = change.doc.data();
+//         console.log("New Friend Added:", request);
+//         inboxList.push(request); // Collect all requests
+//       }
+//     });
+
+//     // Prepare the payload for the Redux action
+//     const payload = {
+//       inboxList: inboxList,
+//       inboxNotification: inboxList.length, // Update the notification count
+//     };
+
+//     console.log("Payload:", payload);
+
+//     // Dispatch action to update the Redux state
+//     dispatch(setSidePanelInbox(payload));
+//   });
+// };
 
 const getFriendsList = async (userId) => {
   // Reference to the document for the current user
@@ -266,6 +283,25 @@ const getFriendsList = async (userId) => {
   }
 };
 
+const initializeInbox = async (receiverId) => {
+  const friendRequestsRef = collection(
+    doc(db, "users", receiverId),
+    "friendRequests"
+  );
+
+  try {
+    const querySnapshot = await getDocs(friendRequestsRef);
+    const friendRequests = querySnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    return friendRequests;
+  } catch (error) {
+    console.log("Error fetching freind data: ", error);
+  }
+};
+
 export {
   loginUser,
   registerUser,
@@ -277,6 +313,7 @@ export {
   getIncomingRequests,
   acceptFriendRequest,
   declineFriendRequest,
-  listenForFriendRequests,
+  // listenForFriendRequests,
   getFriendsList,
+  initializeInbox,
 };

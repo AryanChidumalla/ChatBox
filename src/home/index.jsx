@@ -9,11 +9,21 @@ import InboxIcon from "../assets/inboxIcon.svg";
 import AddFriendIcon from "../assets/addFriendIcon.svg";
 import MyProfileIcon from "../assets/myProfileIcon.svg";
 import SettingsIcon from "../assets/settingsIcon.svg";
-import { StyledButtonWithIcon } from "../mui-templates/button";
+import {
+  StyledButtonWithBadgeAndIcon,
+  StyledButtonWithIcon,
+} from "../mui-templates/button";
+import { useSelector } from "react-redux";
 // import { SidePanel } from "./sidepanel/sidepanel";
 
 function Home() {
   const [sidePanel, setSidePanel] = useState("All Chats");
+
+  const inboxNotification = useSelector(
+    (state) => state.reducer.sidePanel.inbox.inboxNotification
+  );
+
+  console.log("Inbox Notification:", inboxNotification);
 
   return (
     <div
@@ -67,10 +77,11 @@ function Home() {
               icon={GroupChatsIcon}
               onClick={() => setSidePanel("Group Chats")}
             />
-            <StyledButtonWithIcon
+            <StyledButtonWithBadgeAndIcon
               label="Inbox"
               icon={InboxIcon}
               onClick={() => setSidePanel("Inbox")}
+              notificationCount={inboxNotification}
             />
             <StyledButtonWithIcon
               label="Add Friend"

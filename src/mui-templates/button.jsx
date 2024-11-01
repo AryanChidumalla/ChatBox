@@ -1,4 +1,4 @@
-import { Button } from "@mui/material";
+import { Badge, Button } from "@mui/material";
 
 const StyledButton = ({ onClick, label }) => {
   return (
@@ -47,4 +47,41 @@ const StyledButtonWithIcon = ({ onClick, label, icon }) => {
   );
 };
 
-export { StyledButton, StyledButtonWithIcon };
+const StyledButtonWithBadgeAndIcon = ({
+  onClick,
+  label,
+  icon,
+  notificationCount,
+}) => {
+  return (
+    <Button
+      variant="contained"
+      disableRipple
+      onClick={onClick}
+      sx={{
+        backgroundColor: "transparent",
+        color: "#323232",
+        boxShadow: "none",
+        position: "relative",
+        alignItems: "center",
+        "&:hover": {
+          backgroundColor: "#FFDE95",
+          color: "#323232",
+          boxShadow: "none",
+        },
+      }}
+    >
+      <Badge
+        badgeContent={notificationCount}
+        color="error"
+        invisible={notificationCount === 0} // Hide badge if count is 0
+        sx={{ marginRight: "8px" }} // Optional margin for spacing
+      >
+        {icon && <img src={icon} alt="" />}
+      </Badge>
+      {/* {label} */}
+    </Button>
+  );
+};
+
+export { StyledButton, StyledButtonWithIcon, StyledButtonWithBadgeAndIcon };

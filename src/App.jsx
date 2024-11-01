@@ -9,8 +9,10 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "./firebase/firebase";
 import {
   getUserDetails,
-  listenForFriendRequests,
+  initializeInbox,
+  // listenForFriendRequests,
 } from "./firebase/firebaseFunctions";
+import { setSidePanelInbox } from "./redux/reducer/sidepanel";
 
 function App() {
   const dispatch = useDispatch();
@@ -21,7 +23,17 @@ function App() {
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        listenForFriendRequests(user.uid);
+        const inbox = await initializeInbox(user.uid);
+        console.log(inbox);
+
+        // listenForFriendRequests(user.uid);
+
+        // const inboxNotification = useSelector(
+        //   (state) => state.reducer.sidePanel.inbox.inboxNotification
+        // );
+
+        // console.log("Inbox Notification From App.jsx:", inboxNotification);
+
         const serializableUser = {
           uid: user.uid,
           email: user.email,

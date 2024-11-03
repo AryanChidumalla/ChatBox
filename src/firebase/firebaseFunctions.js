@@ -138,14 +138,16 @@ const sendFriendRequest = async (senderId, receiverId) => {
     const friendRequestsRef = collection(receiverRef, "receivedFriendRequests"); // Reference to the friendRequests sub-collection
 
     // Add the friend request data to the receiver's sub-collection
-    await addDoc(friendRequestsRef, friendRequestData);
+    // await addDoc(friendRequestsRef, friendRequestData);
+    await setDoc(doc(friendRequestsRef, senderId), friendRequestData);
 
     // Create a reference to the sender's sentFriendRequests sub-collection
     const senderRef = doc(db, "users", senderId); // Reference to the sender's user document
     const sentFriendRequestsRef = collection(senderRef, "sentFriendRequests"); // Reference to the sentFriendRequests sub-collection
 
     // Add the friend request data to the sender's sub-collection
-    await addDoc(sentFriendRequestsRef, friendRequestData);
+    // await addDoc(sentFriendRequestsRef, friendRequestData);
+    await setDoc(doc(sentFriendRequestsRef, receiverId), friendRequestData);
   } catch (error) {
     console.error("Error sending friend request: ", error);
   }
@@ -185,54 +187,6 @@ const getIncomingRequests = (userId, callback) => {
   return unsubscribe;
 };
 
-// Function to accept a friend request
-const acceptFriendRequest = async (requestId) => {
-  try {
-    // Get the friend request document
-    const requestDocRef = doc(db, "receivedFriendRequests", requestId);
-
-    // Fetch the request data
-    const requestSnapshot = await getDoc(requestDocRef);
-    const requestData = requestSnapshot.data();
-
-    if (requestData) {
-      // Add the users to each other's friends collection (or however you manage friendships)
-      await setDoc(
-        doc(db, "friends", requestData.senderId),
-        {
-          [requestData.receiverId]: true, // Add receiverId as a friend for senderId
-        },
-        { merge: true }
-      );
-
-      await setDoc(
-        doc(db, "friends", requestData.receiverId),
-        {
-          [requestData.senderId]: true, // Add senderId as a friend for receiverId
-        },
-        { merge: true }
-      );
-
-      // Delete the friend request after accepting
-      await deleteDoc(requestDocRef);
-    }
-  } catch (error) {
-    console.error("Error accepting friend request: ", error.message);
-    throw new Error(error.message); // Handle errors appropriately
-  }
-};
-
-// Function to decline a friend request
-const declineFriendRequest = async (requestId) => {
-  try {
-    // Delete the friend request document
-    await deleteDoc(doc(db, "receivedFriendRequests", requestId));
-  } catch (error) {
-    console.error("Error declining friend request: ", error.message);
-    throw new Error(error.message); // Handle errors appropriately
-  }
-};
-
 const getFriendsList = async (userId) => {
   // Reference to the document for the current user
   const friendsDocRef = doc(db, "friends", userId);
@@ -259,9 +213,10 @@ const getFriendsList = async (userId) => {
   }
 };
 
-const initializeInbox = async (receiverId) => {
+// This is a function which fetches for friend requests from the database and sets redux state
+const fetchFriendRequests = async (userId, dispatch) => {
   const friendRequestsRef = collection(
-    doc(db, "users", receiverId),
+    doc(db, "users", userId),
     "receivedFriendRequests"
   );
 
@@ -272,43 +227,174 @@ const initializeInbox = async (receiverId) => {
       ...doc.data(),
     }));
 
-    return friendRequests;
+    const inboxPayload = {
+      inboxList: friendRequests.map((item) => ({
+        ...item,
+        timestamp: item.timestamp.toDate().toISOString(),
+      })),
+      inboxNotification: friendRequests.length,
+    };
+
+    dispatch(setSidePanelInbox(inboxPayload));
   } catch (error) {
     console.log("Error fetching freind data: ", error);
   }
 };
 
-const listenForFriendRequests = (receiverId, dispatch) => {
+// This function actively listens for friend requests and then if there is a change it calls the fetchFriendRequests function
+const listenForFriendRequests = (userId, dispatch) => {
   const friendRequestsRef = collection(
-    doc(db, "users", receiverId),
+    doc(db, "users", userId),
     "receivedFriendRequests"
   );
 
   onSnapshot(friendRequestsRef, (snapshot) => {
     snapshot.docChanges().forEach(async (change) => {
       if (change.type === "added") {
-        try {
-          const querySnapshot = await getDocs(friendRequestsRef);
-          const friendRequests = querySnapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          }));
-
-          const inboxPayload = {
-            inboxList: friendRequests.map((item) => ({
-              ...item,
-              timestamp: item.timestamp.toDate().toISOString(),
-            })),
-            inboxNotification: friendRequests.length,
-          };
-
-          dispatch(setSidePanelInbox(inboxPayload));
-        } catch (error) {
-          console.log("Error fetching freind data: ", error);
-        }
+        fetchFriendRequests(userId, dispatch);
       }
     });
   });
+};
+
+// Function to accept a friend request
+const acceptFriendRequest = async (
+  currentUserId,
+  senderId,
+  requestId,
+  dispatch
+) => {
+  try {
+    // Reference to the current user's document (receiver)
+    const receiverDocRef = doc(db, "users", currentUserId);
+    // Reference to the sender's document
+    const senderDocRef = doc(db, "users", senderId);
+
+    // Reference to the receivedFriendRequests sub-collection for the receiver
+    const receivedFriendRequestsRef = collection(
+      receiverDocRef,
+      "receivedFriendRequests"
+    );
+    // Reference to the sentFriendRequests sub-collection for the sender
+    const sentFriendRequestsRef = collection(
+      senderDocRef,
+      "sentFriendRequests"
+    );
+
+    // Fetch the specific friend request for the receiver
+    const friendRequestsSnapshot = await getDocs(receivedFriendRequestsRef);
+    let foundRequest = null;
+    friendRequestsSnapshot.forEach((doc) => {
+      if (doc.id === senderId) {
+        foundRequest = doc.data();
+      }
+    });
+
+    // Fetch the specific sent request for the sender
+    const sentRequestSnapshot = await getDocs(sentFriendRequestsRef);
+    let foundSentRequest = null;
+    sentRequestSnapshot.forEach((doc) => {
+      if (doc.id === currentUserId) {
+        foundSentRequest = doc.data();
+      }
+    });
+
+    if (foundRequest) {
+      // Delete the friend request from the receiver's receivedFriendRequests
+      await deleteDoc(doc(receivedFriendRequestsRef, senderId));
+
+      // Add to receiver's friends sub-collection
+      const receiverFriendsRef = collection(receiverDocRef, "friends");
+      await setDoc(doc(receiverFriendsRef, senderId), {
+        id: foundRequest.senderId,
+        status: "friends",
+        timestamp: new Date(),
+      });
+    } else {
+      console.log("Error");
+    }
+
+    if (foundSentRequest) {
+      // Delete the sent friend request from the sender's sentFriendRequests
+      await deleteDoc(doc(sentFriendRequestsRef, currentUserId));
+
+      // Add to sender's friends sub-collection
+      const senderFriendsRef = collection(senderDocRef, "friends");
+      await setDoc(doc(senderFriendsRef, currentUserId), {
+        id: foundSentRequest.receiverId,
+        status: "friends",
+        timestamp: new Date(),
+      });
+    } else {
+      console.log("Error");
+    }
+
+    fetchFriendRequests(currentUserId, dispatch);
+  } catch (error) {
+    console.error("Error accepting friend request: ", error.message);
+  }
+};
+
+// Function to decline a friend request
+const declineFriendRequest = async (
+  currentUserId,
+  senderId,
+  requestId,
+  dispatch
+) => {
+  try {
+    // Reference to the current user's document (receiver)
+    const receiverDocRef = doc(db, "users", currentUserId);
+    // Reference to the sender's document
+    const senderDocRef = doc(db, "users", senderId);
+
+    // Reference to the receivedFriendRequests sub-collection for the receiver
+    const receivedFriendRequestsRef = collection(
+      receiverDocRef,
+      "receivedFriendRequests"
+    );
+    // Reference to the sentFriendRequests sub-collection for the sender
+    const sentFriendRequestsRef = collection(
+      senderDocRef,
+      "sentFriendRequests"
+    );
+
+    // Fetch the specific friend request for the receiver
+    const friendRequestsSnapshot = await getDocs(receivedFriendRequestsRef);
+    let foundRequest = null;
+    friendRequestsSnapshot.forEach((doc) => {
+      if (doc.id === senderId) {
+        foundRequest = doc.data();
+      }
+    });
+
+    // Fetch the specific sent request for the sender
+    const sentRequestSnapshot = await getDocs(sentFriendRequestsRef);
+    let foundSentRequest = null;
+    sentRequestSnapshot.forEach((doc) => {
+      if (doc.id === currentUserId) {
+        foundSentRequest = doc.data();
+      }
+    });
+
+    if (foundRequest) {
+      // Delete the friend request from the receiver's receivedFriendRequests
+      await deleteDoc(doc(receivedFriendRequestsRef, senderId));
+    } else {
+      console.log("Error");
+    }
+
+    if (foundSentRequest) {
+      // Delete the sent friend request from the sender's sentFriendRequests
+      await deleteDoc(doc(sentFriendRequestsRef, currentUserId));
+    } else {
+      console.log("Error");
+    }
+
+    fetchFriendRequests(currentUserId, dispatch);
+  } catch (error) {
+    console.error("Error accepting friend request: ", error.message);
+  }
 };
 
 export {
@@ -322,7 +408,8 @@ export {
   getIncomingRequests,
   acceptFriendRequest,
   declineFriendRequest,
+  fetchFriendRequests,
   listenForFriendRequests,
   getFriendsList,
-  initializeInbox,
+  // initializeInbox,
 };

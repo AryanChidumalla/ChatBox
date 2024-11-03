@@ -8,8 +8,9 @@ import { setUser, setUserDetails } from "./redux/reducer/auth";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "./firebase/firebase";
 import {
+  fetchFriendRequests,
   getUserDetails,
-  initializeInbox,
+  // initializeInbox,
   listenForFriendRequests,
   // listenForFriendRequests,
 } from "./firebase/firebaseFunctions";
@@ -24,21 +25,11 @@ function App() {
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        const inbox = await initializeInbox(user.uid);
+        // This initializes the redux states for the user inbox for friend requests
+        await fetchFriendRequests(user.uid, dispatch);
 
-        const inboxPayload = {
-          inboxList: inbox.map((item) => ({
-            ...item,
-            timestamp: item.timestamp.toDate().toISOString(),
-          })),
-          inboxNotification: inbox.length,
-        };
-
-        dispatch(setSidePanelInbox(inboxPayload));
-
+        // This actively listens for changes in friend requests and updates the redux state
         await listenForFriendRequests(user.uid, dispatch);
-
-        // listenForFriendRequests(user.uid);
 
         const serializableUser = {
           uid: user.uid,

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import {
   getIncomingRequests,
   getUserDetails,
@@ -16,12 +16,17 @@ export default function Inbox() {
   );
   const currentUserId = userDetails.uid;
   const [requests, setRequests] = useState([]);
+  const dispatch = useDispatch();
 
   useEffect(() => {
     const fetchUserDetails = async () => {
       const userDetailsPromises = inboxList.map(async (request) => {
         const userDetail = await getUserDetails(request.senderId);
-        return { ...userDetail, requestId: request.id };
+        return {
+          ...userDetail,
+          requestId: request.id,
+          senderId: request.senderId,
+        };
       });
 
       // Wait for all promises to resolve
@@ -40,16 +45,14 @@ export default function Inbox() {
     };
   }, [currentUserId, inboxList]);
 
-  // console.log(requests);
-
-  const handleAccept = async (requestId) => {
-    await acceptFriendRequest(requestId);
+  const handleAccept = async (senderId, requestId) => {
+    await acceptFriendRequest(currentUserId, senderId, requestId, dispatch);
     // Update requests state to remove the accepted request
-    setRequests((prev) => prev.filter((req) => req.requestId !== requestId));
+    // setRequests((prev) => prev.filter((req) => req.requestId !== requestId));
   };
 
-  const handleDecline = async (requestId) => {
-    await declineFriendRequest(requestId);
+  const handleDecline = async (senderId, requestId) => {
+    await declineFriendRequest(currentUserId, senderId, requestId, dispatch);
     // Update requests state to remove the declined request
     setRequests((prev) => prev.filter((req) => req.requestId !== requestId));
   };
@@ -139,18 +142,12 @@ export default function Inbox() {
               >
                 <StyledButton
                   label="Accept"
-                  onClick={() => handleAccept(user.requestId)}
+                  onClick={() => handleAccept(user.senderId, user.requestId)}
                 />
                 <StyledButton
                   label="Decline"
-                  onClick={() => handleDecline(user.requestId)}
+                  onClick={() => handleDecline(user.senderId, user.requestId)}
                 />
-                {/* <button onClick={() => handleAccept(user.requestId)}>
-                Accept
-              </button> */}
-                {/* <button onClick={() => handleDecline(user.requestId)}>
-                Decline
-              </button> */}
               </div>
             </div>
           </div>

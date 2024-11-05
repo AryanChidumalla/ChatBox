@@ -9,9 +9,11 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "./firebase/firebase";
 import {
   fetchFriendRequests,
+  fetchFriends,
   getUserDetails,
   // initializeInbox,
   listenForFriendRequests,
+  listenForNewFriends,
   // listenForFriendRequests,
 } from "./firebase/firebaseFunctions";
 import { setSidePanelInbox } from "./redux/reducer/sidepanel";
@@ -30,6 +32,12 @@ function App() {
 
         // This actively listens for changes in friend requests and updates the redux state
         await listenForFriendRequests(user.uid, dispatch);
+
+        // This initializes the redux states for friends
+        await fetchFriends(user.uid, dispatch);
+
+        // This actively listens for new friends
+        await listenForNewFriends(user.uid, dispatch);
 
         const serializableUser = {
           uid: user.uid,

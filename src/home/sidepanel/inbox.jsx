@@ -63,7 +63,6 @@ export default function Inbox() {
         display: "flex",
         flexDirection: "column",
         gap: "20px",
-        // backgroundColor: "red",
         height: "100%",
       }}
     >

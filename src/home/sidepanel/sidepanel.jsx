@@ -18,11 +18,13 @@ import EmptyProfileIcon from "../../assets/emptyProfileIcon.svg";
 import { StyledButton } from "../../mui-templates/button";
 import Inbox from "./inbox";
 import AddFriend from "./addFriend";
+import AllChats from "./allChats";
 
 function SidePanel({ SidePanelName }) {
   switch (SidePanelName) {
     case "All Chats":
-      return <div>All Chats</div>;
+      // return <div>All Chats</div>;
+      return <AllChats />;
     case "Personal Chats":
       return <div>Personal Chats</div>;
     case "Group Chats":

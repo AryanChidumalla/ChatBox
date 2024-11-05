@@ -14,6 +14,7 @@ import {
   StyledButtonWithIcon,
 } from "../mui-templates/button";
 import { useSelector } from "react-redux";
+import Chat from "./chat";
 // import { SidePanel } from "./sidepanel/sidepanel";
 
 function Home() {
@@ -21,6 +22,9 @@ function Home() {
 
   const inboxNotification = useSelector(
     (state) => state.reducer.sidePanel.inbox.inboxNotification
+  );
+  const chatUserDetails = useSelector(
+    (state) => state.reducer.sidePanel.currentChatUser
   );
 
   // console.log("Inbox Notification:", inboxNotification);
@@ -67,7 +71,7 @@ function Home() {
               icon={AllChatsIcon}
               onClick={() => setSidePanel("All Chats")}
             />
-            <StyledButtonWithIcon
+            {/* <StyledButtonWithIcon
               label="Private Chats"
               icon={PrivateChatsIcon}
               onClick={() => setSidePanel("Private Chats")}
@@ -76,7 +80,7 @@ function Home() {
               label="Group Chats"
               icon={GroupChatsIcon}
               onClick={() => setSidePanel("Group Chats")}
-            />
+            /> */}
             <StyledButtonWithBadgeAndIcon
               label="Inbox"
               icon={InboxIcon}
@@ -118,7 +122,6 @@ function Home() {
             padding: "40px 20px",
           }}
         >
-          {" "}
           <Sidepanel SidePanelName={sidePanel} />
         </div>
         <div
@@ -127,7 +130,9 @@ function Home() {
             flex: 1,
             borderRadius: "0px 10px 10px 0px",
           }}
-        ></div>
+        >
+          {chatUserDetails.id !== null ? <Chat /> : null}
+        </div>
       </div>
     </div>
   );

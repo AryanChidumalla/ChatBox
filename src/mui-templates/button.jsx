@@ -75,7 +75,6 @@ const StyledButtonWithBadgeAndIcon = ({
         badgeContent={notificationCount}
         color="error"
         invisible={notificationCount === 0} // Hide badge if count is 0
-        sx={{ marginRight: "8px" }} // Optional margin for spacing
       >
         {icon && <img src={icon} alt="" />}
       </Badge>

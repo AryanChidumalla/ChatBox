@@ -7,13 +7,30 @@ const sidePanel = createSlice({
       inboxList: [],
       inboxNotification: 0,
     },
+    friends: { friendsList: [] },
+    currentChatUser: {
+      id: null,
+      username: null,
+      description: null,
+      image: null,
+      email: null,
+    },
   },
   reducers: {
     setSidePanelInbox(state, action) {
       state.inbox = action.payload;
     },
+
+    setFriendsList(state, action) {
+      state.friends = action.payload;
+    },
+
+    setCurrentChatUser(state, action) {
+      state.currentChatUser = action.payload;
+    },
   },
 });
 
-export const { setSidePanelInbox } = sidePanel.actions;
+export const { setSidePanelInbox, setFriendsList, setCurrentChatUser } =
+  sidePanel.actions;
 export default sidePanel.reducer;

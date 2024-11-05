@@ -19,7 +19,7 @@ import {
 } from "firebase/auth";
 import { getDownloadURL, getStorage, ref, uploadBytes } from "firebase/storage";
 import { useDispatch } from "react-redux";
-import { setSidePanelInbox } from "../redux/reducer/sidepanel";
+import { setFriendsList, setSidePanelInbox } from "../redux/reducer/sidepanel";
 
 const registerUser = async (username, email, password) => {
   try {
@@ -397,6 +397,88 @@ const declineFriendRequest = async (
   }
 };
 
+const searchFriend = async (currentUserId, searchTerm) => {
+  try {
+    // Reference to the current user's document (receiver)
+    const userDocRef = doc(db, "users", currentUserId);
+
+    // Reference to the friends sub-collection for the receiver
+    const userFriendsRef = collection(userDocRef, "friends");
+
+    // Get all documents in the friends sub-collection
+    const querySnapshot = await getDocs(userFriendsRef);
+
+    // Map through the documents and get the data
+    const friendsList = querySnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    // Filter the friends list based on the search term
+    const filteredFriends = friendsList.filter(
+      (friend) => console.log(friend.id)
+      // friend.username &&
+      // friend.username.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    console.log(filteredFriends);
+    // return filteredFriends; // Return the filtered friends
+  } catch (error) {
+    console.error("Error searching for friends: ", error);
+    return []; // Return an empty array on error
+  }
+};
+
+// This is a function which fetches for friend requests from the database and sets redux state
+const fetchFriends = async (userId, dispatch) => {
+  const friendsRef = collection(doc(db, "users", userId), "friends");
+
+  try {
+    const querySnapshot = await getDocs(friendsRef);
+    const friendsList = querySnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    // Fetch user details for each friend
+    const friendsWithDetails = await Promise.all(
+      friendsList.map(async (friend) => {
+        const userDetails = await getUserDetails(friend.id);
+        return {
+          ...friend,
+          ...userDetails, // Merge friend data with user details
+          timestamp: friend.timestamp
+            ? friend.timestamp.toDate().toISOString()
+            : null, // Handle timestamp
+        };
+      })
+    );
+
+    const inboxPayload = {
+      friendsList: friendsWithDetails,
+    };
+
+    // console.log(inboxPayload);
+
+    // Dispatch to Redux store
+    dispatch(setFriendsList(inboxPayload));
+  } catch (error) {
+    console.log("Error fetching friends: ", error);
+  }
+};
+
+const listenForNewFriends = (userId, dispatch) => {
+  const friendRequestsRef = collection(doc(db, "users", userId), "friends");
+
+  onSnapshot(friendRequestsRef, (snapshot) => {
+    snapshot.docChanges().forEach(async (change) => {
+      if (change.type === "added") {
+        fetchFriends(userId, dispatch);
+      }
+    });
+  });
+};
+
 export {
   loginUser,
   registerUser,
@@ -411,5 +493,8 @@ export {
   fetchFriendRequests,
   listenForFriendRequests,
   getFriendsList,
+  searchFriend,
   // initializeInbox,
+  fetchFriends,
+  listenForNewFriends,
 };

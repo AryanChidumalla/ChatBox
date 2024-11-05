@@ -1,17 +1,43 @@
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import EmptyProfileIcon from "../assets/emptyProfileIcon.svg";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import {
+  getMessages,
+  listenForCurrentNewMessages,
+  sendMessage,
+} from "../firebase/firebaseFunctions";
 
 export default function Chat() {
   const chatUserDetails = useSelector(
     (state) => state.reducer.sidePanel.currentChatUser
   );
 
+  const userDetails = useSelector((state) => state.reducer.auth.userDetails);
+  const currentUserId = userDetails.uid;
+
   const [message, setMessage] = useState("");
+
+  const dispatch = useDispatch();
+
+  const chatId =
+    currentUserId > chatUserDetails.id
+      ? `${currentUserId}${chatUserDetails.id}`
+      : `${chatUserDetails.id}${currentUserId}`;
+
+  const currentChat = useSelector(
+    (state) => state.reducer.chat.currentChat.currentChat
+  );
+
+  // console.log(currentChat);
+
+  useEffect(() => {
+    listenForCurrentNewMessages(chatId, dispatch);
+    getMessages(chatId, dispatch);
+  }, []);
 
   function handleSend() {
     if (message.length > 0) {
-      console.log("Valid message");
+      sendMessage(chatId, message, currentUserId, chatUserDetails.id, dispatch);
     }
   }
 
@@ -69,7 +95,18 @@ export default function Chat() {
           {chatUserDetails.username}
         </h4>
       </div>
-      <div style={{ flex: 1, backgroundColor: "green" }}>Messages</div>
+      <div style={{ flex: 1, backgroundColor: "green", overflow: "auto" }}>
+        {currentChat &&
+          currentChat.map((item, i) => {
+            return (
+              <p>
+                <div>{item.message}</div>
+                <div>{item.senderId}</div>
+                <div>{item.timestamp}</div>
+              </p>
+            );
+          })}
+      </div>
       <div
         style={{
           width: "calc(100% - 40px)",

@@ -6,8 +6,11 @@ import {
   getDoc,
   getDocs,
   onSnapshot,
+  orderBy,
   query,
+  serverTimestamp,
   setDoc,
+  Timestamp,
   updateDoc,
   where,
 } from "firebase/firestore";
@@ -20,6 +23,7 @@ import {
 import { getDownloadURL, getStorage, ref, uploadBytes } from "firebase/storage";
 import { useDispatch } from "react-redux";
 import { setFriendsList, setSidePanelInbox } from "../redux/reducer/sidepanel";
+import { setCurrentChat } from "../redux/reducer/chat";
 
 const registerUser = async (username, email, password) => {
   try {
@@ -479,6 +483,119 @@ const listenForNewFriends = (userId, dispatch) => {
   });
 };
 
+const fetchMessages = async (chatId, dispatch) => {
+  const friendRequestsRef = collection(doc(db, "chats", chatId), "messages");
+
+  try {
+    // Create a query to order messages by 'timestamp' in descending order (newest first)
+    const messagesQuery = query(friendRequestsRef, orderBy("timestamp"));
+
+    const querySnapshot = await getDocs(messagesQuery);
+    const messagesInfo = querySnapshot.docs.map((doc) => {
+      const data = doc.data();
+
+      // Check if the timestamp exists and convert it to a serializable string format
+      if (data.timestamp && data.timestamp instanceof Timestamp) {
+        // Convert Timestamp to a locale time string
+        data.timestamp = data.timestamp.toDate().toLocaleTimeString(); // Or use toISOString() for full date-time format
+      }
+
+      return {
+        id: doc.id,
+        ...data,
+      };
+    });
+
+    console.log(messagesInfo);
+
+    const payload = {
+      currentChat: messagesInfo,
+    };
+
+    dispatch(setCurrentChat(payload));
+  } catch (error) {
+    console.log("Error fetching friend data: ", error);
+  }
+};
+
+const listenForCurrentNewMessages = (chatId, dispatch) => {
+  const currentChatRef = collection(doc(db, "chats", chatId), "messages");
+
+  onSnapshot(currentChatRef, (snapshot) => {
+    snapshot.docChanges().forEach(async (change) => {
+      if (change.type === "added") {
+        fetchMessages(chatId, dispatch);
+      }
+    });
+  });
+};
+
+const sendMessage = async (chatId, message, senderId, receiverId, dispatch) => {
+  try {
+    // Get a reference to the 'messages' subcollection under the specific chatId
+    const messagesRef = collection(db, "chats", chatId, "messages");
+    let messageDoc;
+
+    // Check if the messagesRef exists (this part is redundant, so can be skipped)
+    // Add a new message document to the collection
+    messageDoc = await addDoc(messagesRef, {
+      message: message,
+      senderId: senderId,
+      receiverId: receiverId,
+      timestamp: serverTimestamp(), // Automatically set timestamp on Firestore side
+    });
+
+    // If adding to the messages collection fails for any reason, fall back to the 'messages' collection
+    if (!messageDoc) {
+      messageDoc = await setDoc(doc(db, "messages", chatId), {
+        message: message,
+        senderId: senderId,
+        receiverId: receiverId,
+        timestamp: serverTimestamp(),
+      });
+    }
+
+    fetchMessages(chatId, dispatch);
+
+    // Log the message ID after the operation is complete
+    console.log("Message sent successfully", messageDoc.id); // Log the document ID or any other details
+  } catch (error) {
+    console.error("Error sending message: ", error); // Catch any errors and log them
+  }
+};
+
+const getMessages = async (chatId, dispatch) => {
+  try {
+    // Get a reference to the 'messages' subcollection under the specific chatId
+    const messagesRef = collection(db, "chats", chatId, "messages");
+
+    // Create a query to order the messages by timestamp in ascending order
+    const q = query(messagesRef, orderBy("timestamp"));
+
+    // Execute the query to get the documents
+    const querySnapshot = await getDocs(q);
+
+    // Create an array to store the retrieved messages
+    const messages = [];
+
+    // Iterate over the documents and push the data into the array
+    querySnapshot.forEach((doc) => {
+      messages.push({
+        id: doc.id,
+        ...doc.data(), // Spread the document data
+      });
+    });
+
+    // Log the retrieved messages or return them
+    console.log("Messages retrieved successfully:", messages);
+
+    fetchMessages(chatId, dispatch);
+    return messages;
+  } catch (error) {
+    console.error("Error retrieving messages: ", error); // Catch any errors and log them
+  }
+};
+
 export {
   loginUser,
   registerUser,
@@ -497,4 +614,7 @@ export {
   // initializeInbox,
   fetchFriends,
   listenForNewFriends,
+  sendMessage,
+  getMessages,
+  listenForCurrentNewMessages,
 };

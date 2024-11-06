@@ -120,6 +120,7 @@ function Home() {
             height: "calc(100% - 80px)",
             width: "20%",
             padding: "40px 20px",
+            borderRight: "1px solid #323232",
           }}
         >
           <Sidepanel SidePanelName={sidePanel} />

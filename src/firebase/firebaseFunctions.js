@@ -23,7 +23,7 @@ import {
 import { getDownloadURL, getStorage, ref, uploadBytes } from "firebase/storage";
 import { useDispatch } from "react-redux";
 import { setFriendsList, setSidePanelInbox } from "../redux/reducer/sidepanel";
-import { setCurrentChat } from "../redux/reducer/chat";
+import { setChatList, setCurrentChat } from "../redux/reducer/chat";
 
 const registerUser = async (username, email, password) => {
   try {
@@ -555,7 +555,8 @@ const sendMessage = async (chatId, message, senderId, receiverId, dispatch) => {
       });
     }
 
-    fetchMessages(chatId, dispatch);
+    // fetchMessages(chatId, dispatch);
+    initializeAllChats(senderId, dispatch);
 
     // Log the message ID after the operation is complete
     console.log("Message sent successfully", messageDoc.id); // Log the document ID or any other details
@@ -596,6 +597,144 @@ const getMessages = async (chatId, dispatch) => {
   }
 };
 
+const initializeAllChats = async (userId, dispatch) => {
+  try {
+    // Assuming you have a function to get the chat list for a user
+    const userRef = collection(db, "users", userId, "friends");
+    const querySnapshot = await getDocs(userRef);
+
+    const allChats = [];
+
+    // Loop through the friends list and retrieve chat data for each user
+    for (const doc of querySnapshot.docs) {
+      const otherUserId = doc.data().id;
+      const chatId =
+        userId > otherUserId
+          ? `${userId}${otherUserId}`
+          : `${otherUserId}${userId}`;
+
+      // Fetch the username of the friend (from the users collection)
+      const userDetails = await getUserDetails(otherUserId); // Get user details including username
+
+      // Fetch messages (ensure this function returns an array of messages)
+      const messages = await fetchMessagesNew(chatId);
+
+      if (messages.length > 0) {
+        allChats.push({
+          id: otherUserId,
+          username: userDetails.username,
+          messages: messages,
+          image: userDetails.image,
+          description: userDetails.description,
+          email: userDetails.email,
+        });
+      }
+    }
+
+    // Dispatch the chat list to Redux
+    dispatch(setChatList(allChats)); // Ensure you're dispatching an array
+  } catch (error) {
+    console.error("Error fetching chats:", error);
+  }
+};
+
+// Function to fetch messages from the 'chats/{chatId}/messages' collection
+async function fetchMessagesNew(chatId) {
+  const friendRequestsRef = collection(doc(db, "chats", chatId), "messages");
+
+  try {
+    // Create a query to order messages by 'timestamp' in descending order (newest first)
+    const messagesQuery = query(friendRequestsRef, orderBy("timestamp"));
+
+    const querySnapshot = await getDocs(messagesQuery);
+    const messagesInfo = querySnapshot.docs.map((doc) => {
+      const data = doc.data();
+
+      // Check if the timestamp exists and convert it to a serializable string format
+      if (data.timestamp && data.timestamp instanceof Timestamp) {
+        // Convert Timestamp to a locale time string
+        data.timestamp = data.timestamp.toDate().toLocaleTimeString(); // Or use toISOString() for full date-time format
+      }
+
+      return {
+        id: doc.id,
+        ...data,
+      };
+    });
+
+    return messagesInfo; // Return the list of messages from this chat
+  } catch (error) {
+    console.log("Error fetching messages: ", error);
+    return []; // Return an empty array if something goes wrong
+  }
+}
+
+const listenForNewMessages = (userId, dispatch) => {
+  // First, fetch the list of friends for the current user
+  const fetchFriendChats = async () => {
+    try {
+      const userDocRef = doc(db, "users", userId);
+      const userFriendsRef = collection(userDocRef, "friends");
+
+      // Fetch all friends
+      const querySnapshot = await getDocs(userFriendsRef);
+
+      // Iterate over the friends and listen for new messages in each chat
+      querySnapshot.forEach((doc) => {
+        const friendId = doc.id;
+        const chatId =
+          userId > friendId ? `${userId}${friendId}` : `${friendId}${userId}`;
+
+        // Set up a listener for new messages in each chat
+        const messagesRef = collection(db, "chats", chatId, "messages");
+
+        onSnapshot(messagesRef, (snapshot) => {
+          snapshot.docChanges().forEach(async (change) => {
+            if (change.type === "added") {
+              // Fetch new messages and update the state
+              await fetchMessagesNewNew(chatId, dispatch);
+            }
+          });
+        });
+      });
+    } catch (error) {
+      console.error("Error listening for new messages:", error);
+    }
+  };
+
+  // Start listening for new messages for all friends
+  fetchFriendChats();
+};
+
+const fetchMessagesNewNew = async (chatId, dispatch) => {
+  try {
+    // Get a reference to the 'messages' subcollection under the specific chatId
+    const messagesRef = collection(db, "chats", chatId, "messages");
+
+    // Create a query to order the messages by timestamp in ascending order
+    const q = query(messagesRef, orderBy("timestamp"));
+
+    // Execute the query to get the documents
+    const querySnapshot = await getDocs(q);
+
+    // Create an array to store the retrieved messages
+    const messages = [];
+
+    // Iterate over the documents and push the data into the array
+    querySnapshot.forEach((doc) => {
+      messages.push({
+        id: doc.id,
+        ...doc.data(), // Spread the document data
+      });
+    });
+
+    // Dispatch the updated messages to Redux state
+    dispatch(setCurrentChat({ chatId, messages }));
+  } catch (error) {
+    console.error("Error retrieving messages: ", error);
+  }
+};
+
 export {
   loginUser,
   registerUser,
@@ -617,4 +756,7 @@ export {
   sendMessage,
   getMessages,
   listenForCurrentNewMessages,
+  initializeAllChats,
+  fetchMessagesNew,
+  listenForNewMessages,
 };

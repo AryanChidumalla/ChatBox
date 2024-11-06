@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   StyledTextfield,
   StyledTextfieldForAddFriend,
@@ -6,6 +6,10 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import EmptyProfileIcon from "../../assets/emptyProfileIcon.svg";
 import { setCurrentChatUser } from "../../redux/reducer/sidepanel";
+import {
+  initializeAllChats,
+  listenForNewMessages,
+} from "../../firebase/firebaseFunctions";
 
 export default function AllChats() {
   const search = useRef();
@@ -15,9 +19,17 @@ export default function AllChats() {
   );
   const currentUserId = userDetails.uid;
 
+  const chatList = useSelector((state) => state.reducer.chat.chatList);
+
   const dispatch = useDispatch();
 
   const [results, setResults] = useState([]);
+
+  useEffect(() => {
+    initializeAllChats(currentUserId, dispatch);
+    listenForNewMessages(currentUserId, dispatch);
+    // listenForNewMessages(currentUserId, dispatch);
+  }, []);
 
   async function handleSearch() {
     const term = search.current.value;
@@ -46,6 +58,75 @@ export default function AllChats() {
     dispatch(setCurrentChatUser(payLoad));
   }
 
+  const ChatListDiv = ({ chatList }) => {
+    if (!chatList || chatList.length === 0) {
+      return <div>No chats available</div>; // Handle case where there are no chats
+    }
+
+    return (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "20px",
+          height: "100%",
+        }}
+      >
+        {chatList.map((chat, i) => (
+          <div
+            key={i}
+            style={{
+              display: "flex",
+              gap: "10px",
+              alignItems: "center",
+              backgroundColor: "#EDEDED",
+              padding: "10px",
+              borderRadius: "10px",
+              cursor: "pointer",
+            }}
+            onClick={() => handleUserClick(chat)}
+          >
+            <div>
+              {chat.image === "" ? (
+                <img
+                  src={EmptyProfileIcon}
+                  alt="Profile"
+                  style={{
+                    width: "50px",
+                    height: "50px",
+                    borderRadius: "50%",
+                  }}
+                />
+              ) : (
+                <img
+                  src={chat.image}
+                  alt="Profile"
+                  style={{
+                    width: "50px",
+                    height: "50px",
+                    borderRadius: "50%",
+                  }}
+                />
+              )}
+            </div>
+            <div style={{ flexGrow: 1 }}>
+              <h4
+                style={{
+                  color: "#323232",
+                  margin: "0",
+                  display: "flex",
+                  justifyContent: "flex-start",
+                }}
+              >
+                {chat.username}
+              </h4>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <div
       style={{
@@ -70,63 +151,69 @@ export default function AllChats() {
         inputRef={search}
         onChange={handleSearch}
       />
-      {search.current &&
-        search.current.value !== "" &&
-        (results.length === 0 ? (
-          <div>No results found</div>
-        ) : (
-          results.map((user, i) => (
-            <div
-              key={i}
-              style={{
-                display: "flex",
-                gap: "10px",
-                alignItems: "center",
-                backgroundColor: "#EDEDED",
-                padding: "10px",
-                borderRadius: "10px",
-                cursor: "pointer",
-              }}
-              onClick={() => handleUserClick(user)}
-            >
-              <div>
-                {user.image === "" ? (
-                  <img
-                    src={EmptyProfileIcon}
-                    alt="Profile"
-                    style={{
-                      width: "50px",
-                      height: "50px",
-                      borderRadius: "50%",
-                    }}
-                  />
-                ) : (
-                  <img
-                    src={user.image}
-                    alt="Profile"
-                    style={{
-                      width: "50px",
-                      height: "50px",
-                      borderRadius: "50%",
-                    }}
-                  />
-                )}
-              </div>
-              <div style={{ flexGrow: 1 }}>
-                <h4
+
+      {search.current?.value === "" ? (
+        <ChatListDiv chatList={chatList} />
+      ) : (
+        <>
+          {search.current?.value !== "" &&
+            (results.length === 0 ? (
+              <div>No results found</div>
+            ) : (
+              results.map((user, i) => (
+                <div
+                  key={i}
                   style={{
-                    color: "#323232",
-                    margin: "0",
                     display: "flex",
-                    justifyContent: "flex-start",
+                    gap: "10px",
+                    alignItems: "center",
+                    backgroundColor: "#EDEDED",
+                    padding: "10px",
+                    borderRadius: "10px",
+                    cursor: "pointer",
                   }}
+                  onClick={() => handleUserClick(user)}
                 >
-                  {user.username}
-                </h4>
-              </div>
-            </div>
-          ))
-        ))}
+                  <div>
+                    {user.image === "" ? (
+                      <img
+                        src={EmptyProfileIcon}
+                        alt="Profile"
+                        style={{
+                          width: "50px",
+                          height: "50px",
+                          borderRadius: "50%",
+                        }}
+                      />
+                    ) : (
+                      <img
+                        src={user.image}
+                        alt="Profile"
+                        style={{
+                          width: "50px",
+                          height: "50px",
+                          borderRadius: "50%",
+                        }}
+                      />
+                    )}
+                  </div>
+                  <div style={{ flexGrow: 1 }}>
+                    <h4
+                      style={{
+                        color: "#323232",
+                        margin: "0",
+                        display: "flex",
+                        justifyContent: "flex-start",
+                      }}
+                    >
+                      {user.username}
+                    </h4>
+                  </div>
+                </div>
+              ))
+            ))}
+        </>
+      )}
     </div>
   );
 }

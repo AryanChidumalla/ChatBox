@@ -24,15 +24,30 @@ export default function Chat() {
       ? `${currentUserId}${chatUserDetails.id}`
       : `${chatUserDetails.id}${currentUserId}`;
 
-  const currentChat = useSelector(
-    (state) => state.reducer.chat.currentChat.currentChat
-  );
+  // const currentChat = useSelector(
+  //   (state) => state.reducer.chat.currentChat.currentChat
+  // );
 
-  // console.log(currentChat);
+  const [currentChat, setCurrentChat] = useState([]);
+
+  const chatList = useSelector((state) => state.reducer.chat.chatList);
+
+  useEffect(() => {
+    // Find the chat messages for the selected user
+    const currentChatMessages = chatList.find(
+      (chatDetails) => chatUserDetails.id === chatDetails.id
+    );
+
+    // If a chat is found for the user, update the currentChat state
+    if (currentChatMessages) {
+      setCurrentChat(currentChatMessages.messages);
+    }
+  }, [chatList, chatUserDetails.id]); // Re-run the effect when chatList or chatUserDetails changes
 
   useEffect(() => {
     listenForCurrentNewMessages(chatId, dispatch);
     getMessages(chatId, dispatch);
+    // listenForNewMessages(currentUserId, dispatch);
   }, []);
 
   function handleSend() {
@@ -95,14 +110,59 @@ export default function Chat() {
           {chatUserDetails.username}
         </h4>
       </div>
-      <div style={{ flex: 1, backgroundColor: "green", overflow: "auto" }}>
+      <div
+        style={{
+          flex: 1,
+          backgroundColor: "#FDFDFD",
+          overflow: "auto",
+          padding: "20px",
+        }}
+      >
         {currentChat &&
           currentChat.map((item, i) => {
             return (
               <p>
-                <div>{item.message}</div>
-                <div>{item.senderId}</div>
-                <div>{item.timestamp}</div>
+                {item.senderId === currentUserId ? (
+                  <div
+                    style={{
+                      width: "100%",
+                      display: "flex",
+                      justifyContent: "flex-end",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: "fit-content",
+                        maxWidth: "60%",
+                        backgroundColor: "#FFDE95",
+                        padding: "10px",
+                        borderRadius: "10px 10px 0px 10px",
+                      }}
+                    >
+                      {item.message}
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      width: "100%",
+                      display: "flex",
+                      justifyContent: "flex-start",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: "fit-content",
+                        maxWidth: "60%",
+                        backgroundColor: "#EDEDED",
+                        padding: "10px",
+                        borderRadius: "10px 10px 10px 0px",
+                      }}
+                    >
+                      {item.message}
+                    </div>
+                  </div>
+                )}
               </p>
             );
           })}

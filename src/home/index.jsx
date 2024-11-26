@@ -132,7 +132,7 @@ function Home() {
             borderRadius: "0px 10px 10px 0px",
           }}
         >
-          {chatUserDetails.id !== null ? <Chat /> : null}
+          {/* {chatUserDetails.id !== null ? <Chat /> : null} */}
         </div>
       </div>
     </div>

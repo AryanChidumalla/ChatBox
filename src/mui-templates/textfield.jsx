@@ -125,6 +125,29 @@ const StyledButton = ({ onClick, label }) => {
   );
 };
 
+const StyledButtonForRegister = ({ onClick, label }) => {
+  return (
+    <Button
+      variant="contained"
+      onClick={onClick}
+      sx={{
+        backgroundColor: "#FFDE95",
+        color: "#323232",
+        fontWeight: "bold",
+        boxShadow: "none",
+        textTransform: "none",
+        "&:hover": {
+          backgroundColor: "#FFDE95",
+          color: "#323232",
+          boxShadow: "none",
+        },
+      }}
+    >
+      {label}
+    </Button>
+  );
+};
+
 const TextFieldWithValue = ({ label, value, onChange }) => {
   return (
     <TextField

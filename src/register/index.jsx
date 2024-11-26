@@ -1,12 +1,10 @@
 import "./style.css";
-
 import { useState, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { hide, show } from "../redux/reducer/formError";
 import { clearMessage, setMessage } from "../redux/reducer/formErrorMessage";
 import { Alert, Snackbar } from "@mui/material";
 import {
-  StyledButton,
   StyledPasswordTextField,
   StyledTextfield,
 } from "../mui-templates/textfield";
@@ -16,11 +14,14 @@ import {
   getUserDetails,
 } from "../firebase/firebaseFunctions";
 import { setUser, setUserDetails } from "../redux/reducer/auth";
+import { StyledButtonForRegister } from "../mui-templates/button";
 
 function Register() {
   const [showLogin, setShowLogin] = useState(true);
-
   const dispatch = useDispatch();
+
+  // Track loading state for async operations
+  const [isLoading, setIsLoading] = useState(false);
 
   const bool = useSelector((state) => state.reducer.error);
   const message = useSelector((state) => state.reducer.errorMsg);
@@ -54,8 +55,16 @@ function Register() {
           showLogin ? "animate-signup" : "animate-login"
         }`}
       >
-        <LogIn setShowLogin={setShowLogin} />
-        <SignUp setShowLogin={setShowLogin} />
+        <LogIn
+          setShowLogin={setShowLogin}
+          isLoading={isLoading}
+          setIsLoading={setIsLoading}
+        />
+        <SignUp
+          setShowLogin={setShowLogin}
+          isLoading={isLoading}
+          setIsLoading={setIsLoading}
+        />
       </div>
       {bool ? (
         <div className="ErrorContainer">
@@ -75,18 +84,19 @@ function Register() {
   );
 }
 
-function LogIn({ setShowLogin }) {
+function LogIn({ setShowLogin, isLoading, setIsLoading }) {
   const email = useRef(null);
   const password = useRef(null);
-
   const dispatch = useDispatch();
 
-  async function LogIn() {
+  // Log In function
+  async function handleLogin() {
     if (email.current.value === "" || password.current.value === "") {
       dispatch(show());
       dispatch(setMessage("Please fill all the fields!"));
     } else {
       try {
+        setIsLoading(true); // Set loading to true while logging in
         const user = await loginUser(
           email.current.value,
           password.current.value
@@ -103,8 +113,10 @@ function LogIn({ setShowLogin }) {
         dispatch(setUserDetails(userDetails));
       } catch (error) {
         console.log(error);
-        // dispatch(show());
-        // dispatch(setMessage(error.message)); // Handle errors appropriately
+        dispatch(show());
+        dispatch(setMessage(error.message));
+      } finally {
+        setIsLoading(false); // Reset loading after operation
       }
     }
   }
@@ -115,7 +127,11 @@ function LogIn({ setShowLogin }) {
       <form>
         <StyledTextfield label="Email" inputRef={email} />
         <StyledPasswordTextField label="Password" inputRef={password} />
-        <StyledButton onClick={LogIn} label="Log In" />
+        <StyledButtonForRegister
+          onClick={handleLogin}
+          label={isLoading ? "Logging in..." : "Log In"}
+          disabled={isLoading}
+        />
       </form>
       <p>
         Don't have an account?
@@ -131,14 +147,14 @@ function LogIn({ setShowLogin }) {
   );
 }
 
-function SignUp({ setShowLogin }) {
+function SignUp({ setShowLogin, isLoading, setIsLoading }) {
   const username = useRef(null);
   const email = useRef(null);
   const password = useRef(null);
   const confirmPassword = useRef(null);
-
   const dispatch = useDispatch();
 
+  // Sign Up function
   async function handleSignUp() {
     let flag = 0;
 
@@ -159,6 +175,7 @@ function SignUp({ setShowLogin }) {
 
     if (flag === 0) {
       try {
+        setIsLoading(true); // Set loading to true while signing up
         const user = await registerUser(
           username.current.value,
           email.current.value,
@@ -170,10 +187,12 @@ function SignUp({ setShowLogin }) {
           email: user.email,
         };
 
-        dispatch(setUser(serializableUser)); // Dispatch action to set user in Redux
+        dispatch(setUser(serializableUser));
       } catch (error) {
         dispatch(show());
-        dispatch(setMessage(error.message)); // Handle errors appropriately
+        dispatch(setMessage(error.message));
+      } finally {
+        setIsLoading(false); // Reset loading after operation
       }
     }
   }
@@ -189,7 +208,11 @@ function SignUp({ setShowLogin }) {
           label="Confirm Password"
           inputRef={confirmPassword}
         />
-        <StyledButton onClick={handleSignUp} label="Sign Up" />
+        <StyledButtonForRegister
+          onClick={handleSignUp}
+          label={isLoading ? "Signing up..." : "Sign Up"}
+          disabled={isLoading}
+        />
       </form>
       <p>
         Already have an account?

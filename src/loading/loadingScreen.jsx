@@ -1,11 +1,20 @@
-import React from 'react'
-import ReactLoading from "react-loading";
-import styles from './loadingScreen.module.css'
+import React from "react";
+import LoadingAnimation from "../assets/LoadingAnimation.mp4";
 
 export const LoadingScreen = () => {
   return (
-    <div className={styles.container}>
-      <ReactLoading type="spokes" color="#9ef2eb" height={100} width={50} />
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+      }}
+    >
+      <video autoPlay loop muted>
+        <source src={LoadingAnimation} type="video/mp4" />
+      </video>
     </div>
-  )
-}
+  );
+};

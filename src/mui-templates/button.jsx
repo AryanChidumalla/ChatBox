@@ -83,4 +83,33 @@ const StyledButtonWithBadgeAndIcon = ({
   );
 };
 
-export { StyledButton, StyledButtonWithIcon, StyledButtonWithBadgeAndIcon };
+const StyledButtonForRegister = ({ onClick, label, disabled }) => {
+  return (
+    <Button
+      variant="contained"
+      onClick={onClick}
+      disabled={disabled} // Disable button when loading is true
+      sx={{
+        backgroundColor: "#FFDE95",
+        color: "#323232",
+        fontWeight: "bold",
+        boxShadow: "none",
+        textTransform: "none",
+        "&:hover": {
+          backgroundColor: "#FFDE95",
+          color: "#323232",
+          boxShadow: "none",
+        },
+      }}
+    >
+      {label}
+    </Button>
+  );
+};
+
+export {
+  StyledButton,
+  StyledButtonWithIcon,
+  StyledButtonWithBadgeAndIcon,
+  StyledButtonForRegister,
+};
